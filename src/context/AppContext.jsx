@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 
 const AppContext = createContext();
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = `${BASE_URL}/api`;
 
 export function AppProvider({ children }) {
   const [complaints, setComplaints] = useState([]);

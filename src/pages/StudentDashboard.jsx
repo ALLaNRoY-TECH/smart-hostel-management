@@ -15,43 +15,32 @@ import {
 import { GlassCard } from '../components/ui/GlassCard';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-
 import { useAppContext } from '../context/AppContext';
 
-const API_URL = 'http://localhost:5000/api';
 
 export function StudentDashboard() {
-  const { user, logout } = useAppContext();
-  const [complaints, setComplaints] = useState([]);
+  const { user, logout, complaints, fetchComplaints, addComplaint } = useAppContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({ title: '', desc: '' });
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'raise', 'history'
 
-  const fetchComplaints = useCallback(async (studentId) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API_URL}/complaints?studentId=${studentId}`);
-      if (!res.ok) throw new Error('Failed to fetch complaints');
-      const data = await res.json();
-      setComplaints(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error(err);
-      setError('Could not load your complaints. Please check your connection.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    if (user?.id) {
-      fetchComplaints(user.id);
-    } else if (user === null) {
-      setIsLoading(false);
-    }
-  }, [user, fetchComplaints]);
+    const loadData = async () => {
+      if (user?.id) {
+        setIsLoading(true);
+        try {
+          await fetchComplaints();
+        } catch (err) {
+          setError('Could not load complaints.');
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+    loadData();
+  }, [user]);
 
   const stats = [
     { label: 'Total', value: complaints.length, icon: AlertCircle, color: 'text-primary' },
@@ -65,24 +54,9 @@ export function StudentDashboard() {
     
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${API_URL}/complaints`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          student_id: user.id,
-          title: formData.title,
-          description: formData.desc
-        })
-      });
-
-      if (!res.ok) throw new Error('Submission failed');
-      const data = await res.json();
-
-      if (data.success) {
-        setFormData({ title: '', desc: '' });
-        await fetchComplaints(user.id);
-        setActiveTab('overview');
-      }
+      await addComplaint({ title: formData.title, description: formData.desc });
+      setFormData({ title: '', desc: '' });
+      setActiveTab('overview');
     } catch (err) {
       console.error(err);
       alert("Failed to submit complaint. Please try again.");
