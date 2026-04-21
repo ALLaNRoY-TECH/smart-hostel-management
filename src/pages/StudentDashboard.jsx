@@ -18,13 +18,27 @@ import { Badge } from '../components/ui/Badge';
 import { useAppContext } from '../context/AppContext';
 
 
+import { useLocation, useNavigate } from 'react-router-dom';
+
 export function StudentDashboard() {
   const { user, logout, complaints, fetchComplaints, addComplaint } = useAppContext();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({ title: '', desc: '' });
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'raise', 'history'
+
+  // Map path to active tab logic
+  const getActiveTab = () => {
+    const path = location.pathname;
+    if (path.includes('/student/raise')) return 'raise';
+    if (path.includes('/student/list')) return 'history';
+    if (path.includes('/student/profile')) return 'profile';
+    return 'overview';
+  };
+
+  const activeTab = getActiveTab();
 
   useEffect(() => {
     const loadData = async () => {
@@ -56,7 +70,7 @@ export function StudentDashboard() {
     try {
       await addComplaint({ title: formData.title, description: formData.desc });
       setFormData({ title: '', desc: '' });
-      setActiveTab('overview');
+      navigate('/student'); // Go back to overview
     } catch (err) {
       console.error(err);
       alert("Failed to submit complaint. Please try again.");
@@ -84,21 +98,21 @@ export function StudentDashboard() {
         </div>
         <div className="flex gap-2">
           <Button 
-            onClick={() => setActiveTab('overview')}
+            onClick={() => navigate('/student')}
             variant={activeTab === 'overview' ? 'default' : 'outline'}
             className="rounded-full px-6"
           >
             Overview
           </Button>
           <Button 
-            onClick={() => setActiveTab('history')}
+            onClick={() => navigate('/student/list')}
             variant={activeTab === 'history' ? 'default' : 'outline'}
             className="rounded-full px-6"
           >
             My Requests
           </Button>
           <Button 
-            onClick={() => setActiveTab('raise')}
+            onClick={() => navigate('/student/raise')}
             variant="accent"
             className="rounded-full px-6 shadow-lg shadow-accent/20"
           >
@@ -322,7 +336,7 @@ export function StudentDashboard() {
                     type="button" 
                     variant="outline" 
                     className="flex-1 py-4"
-                    onClick={() => setActiveTab('overview')}
+                    onClick={() => navigate('/student')}
                   >
                     Cancel
                   </Button>
@@ -335,6 +349,31 @@ export function StudentDashboard() {
                   </Button>
                 </div>
               </form>
+            </GlassCard>
+          </motion.div>
+        )}
+
+        {activeTab === 'profile' && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-2xl mx-auto py-10">
+            <GlassCard className="p-10 text-center space-y-6">
+              <div className="w-24 h-24 bg-gradient-to-br from-primary to-accent rounded-full mx-auto flex items-center justify-center text-white text-3xl font-bold shadow-xl">
+                {user?.name?.[0] || 'S'}
+              </div>
+              <div>
+                <h2 className="text-3xl font-bold text-primary">{user?.name}</h2>
+                <p className="text-primary/60 font-medium">{user?.email}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-left">
+                <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
+                  <span className="text-[10px] uppercase tracking-widest text-primary/40 font-bold">User Role</span>
+                  <p className="text-primary font-bold">Student</p>
+                </div>
+                <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
+                  <span className="text-[10px] uppercase tracking-widest text-primary/40 font-bold">Student ID</span>
+                  <p className="text-primary font-bold">#{user?.id}</p>
+                </div>
+              </div>
+              <Button variant="outline" className="w-full mt-4" onClick={logout}>Sign Out</Button>
             </GlassCard>
           </motion.div>
         )}

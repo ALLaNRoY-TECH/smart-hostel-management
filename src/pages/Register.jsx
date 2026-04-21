@@ -10,6 +10,7 @@ export function Register() {
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { login } = useAppContext();
   const navigate = useNavigate();
   const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -22,7 +23,11 @@ export function Register() {
       const res = await fetch(`${BASE_URL}/api/student/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password
+        })
       });
 
       const data = await res.json();
@@ -31,11 +36,11 @@ export function Register() {
         alert("Registration Successful! Please login. 🔥");
         navigate('/login/student');
       } else {
-        setError(data.message || "Registration failed ❌");
+        setError(data.message || data.error || "Registration failed ❌");
       }
     } catch (err) {
       console.error(err);
-      setError("Server error ❌");
+      setError(`Network or Server error: ${err.message} ❌`);
     }
 
     setLoading(false);
