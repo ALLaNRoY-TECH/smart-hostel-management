@@ -5,7 +5,10 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export function AppProvider({ children }) {
   const [complaints, setComplaints] = useState([]);
-  const [user, setUser] = useState(null); // { id, name, email, role }
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem("user");
+    return saved ? JSON.parse(saved) : null;
+  });
   const [loading, setLoading] = useState(false);
 
   const fetchComplaints = async () => {
@@ -77,7 +80,9 @@ export function AppProvider({ children }) {
       });
       const data = await res.json();
       if (data.success) {
-        setUser({ ...data.user, role });
+        const userData = { ...data.user, role };
+        setUser(userData);
+        localStorage.setItem("user", JSON.stringify(userData));
         return true;
       }
       return false;
@@ -89,7 +94,11 @@ export function AppProvider({ children }) {
     }
   };
 
-  const logout = () => setUser(null);
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem("user");
+    window.location.href = "/";
+  };
 
   return (
     <AppContext.Provider value={{ complaints, user, login, logout, loading, addComplaint, updateComplaintStatus, toggleLock, fetchComplaints }}>

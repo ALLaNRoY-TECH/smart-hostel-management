@@ -1,6 +1,19 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Lock, Unlock, Check, Clock, Edit2, Users, AlertTriangle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Lock, 
+  Unlock, 
+  Check, 
+  Clock, 
+  Users, 
+  AlertTriangle, 
+  LayoutDashboard, 
+  ListChecks, 
+  Search,
+  Filter,
+  MoreHorizontal,
+  ChevronRight
+} from 'lucide-react';
 import { GlassCard } from '../components/ui/GlassCard';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -10,167 +23,201 @@ import { useLocation } from 'react-router-dom';
 export function AdminDashboard() {
   const { complaints, updateComplaintStatus, toggleLock, user } = useAppContext();
   const [filter, setFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const adminId = user?.id;
   const location = useLocation();
 
   const filteredComplaints = complaints.filter(c => {
-    if (filter === 'all') return true;
-    return c.status === filter;
+    const matchesFilter = filter === 'all' || c.status.toLowerCase() === filter.toLowerCase();
+    const matchesSearch = c.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         c.id.toString().includes(searchTerm);
+    return matchesFilter && matchesSearch;
   });
 
   const handleUpdateStatus = (id, currentStatus) => {
-    const nextStatus = currentStatus === 'pending' ? 'progress' : currentStatus === 'progress' ? 'resolved' : 'pending';
+    const nextStatus = currentStatus.toLowerCase() === 'pending' ? 'progress' : 
+                      currentStatus.toLowerCase() === 'progress' ? 'resolved' : 'pending';
     updateComplaintStatus(id, nextStatus);
   };
 
   const renderComplaintsTable = () => (
-    <>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+    <div className="space-y-6">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
         <div>
-          <h2 className="text-2xl font-bold text-text">Complaint Management</h2>
-          <p className="text-primary-light">Handle student requests with concurrency control.</p>
+          <h2 className="text-3xl font-bold text-primary">Service Requests</h2>
+          <p className="text-primary/60">Manage hostel issues and maintenance tasks</p>
         </div>
-        <div className="flex bg-white/50 p-1 rounded-lg border border-primary/20">
-          {['all', 'pending', 'progress', 'resolved'].map(f => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-1.5 rounded-md text-sm font-medium capitalize transition-all ${
-                filter === f ? 'bg-primary text-white shadow-md' : 'text-primary hover:bg-primary/5'
-              }`}
-            >
-              {f}
-            </button>
-          ))}
+        
+        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+          <div className="relative flex-1 lg:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/40" />
+            <input 
+              type="text"
+              placeholder="Search by ID or Title..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-white/50 border border-primary/20 rounded-xl focus:ring-2 focus:ring-accent/20 focus:border-accent outline-none text-sm transition-all"
+            />
+          </div>
+          <div className="flex bg-primary/5 p-1 rounded-xl border border-primary/10">
+            {['all', 'pending', 'progress', 'resolved'].map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+                  filter === f ? 'bg-primary text-white shadow-lg' : 'text-primary/60 hover:text-primary hover:bg-primary/5'
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      <GlassCard className="p-0 overflow-hidden w-full border-primary/20">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-primary/5 text-primary-light text-sm border-b border-primary/20">
-              <tr>
-                <th className="px-6 py-4 font-medium">ID</th>
-                <th className="px-6 py-4 font-medium">Title & Category</th>
-                <th className="px-6 py-4 font-medium">Date</th>
-                <th className="px-6 py-4 font-medium">Status</th>
-                <th className="px-6 py-4 font-medium">Concurrency</th>
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-primary/10">
-              {filteredComplaints.map((complaint, i) => {
-                const isLocked = complaint.locked_by !== null;
-                const isLockedByMe = complaint.locked_by === adminId;
-                const isLockedByOther = isLocked && !isLockedByMe;
+      <div className="grid grid-cols-1 gap-4">
+        <AnimatePresence>
+          {filteredComplaints.length === 0 ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-20 text-center">
+              <div className="w-16 h-16 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Search className="w-8 h-8 text-primary/20" />
+              </div>
+              <p className="text-primary/60 font-medium">No requests found matching your criteria</p>
+            </motion.div>
+          ) : (
+            filteredComplaints.map((complaint, i) => {
+              const isLocked = complaint.locked_by !== null;
+              const isLockedByMe = complaint.locked_by === adminId;
+              const isLockedByOther = isLocked && !isLockedByMe;
+              const status = complaint.status.toLowerCase();
 
-                return (
-                  <motion.tr 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: i * 0.05 }}
-                    key={complaint.id} 
-                    className={`hover:bg-primary/5 transition-colors ${isLockedByOther ? 'opacity-60 bg-gray-50' : 'bg-white/40'}`}
+              return (
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  key={complaint.id}
+                >
+                  <GlassCard 
+                    className={`p-6 border-l-4 transition-all ${
+                      isLockedByOther ? 'opacity-60 grayscale-[0.5] border-l-primary/10' : 
+                      status === 'resolved' ? 'border-l-green-500' :
+                      status === 'progress' ? 'border-l-amber-500' : 'border-l-primary'
+                    }`}
+                    hover={!isLockedByOther}
                   >
-                    <td className="px-6 py-4 text-text font-medium">CMP-{complaint.id}</td>
-                    <td className="px-6 py-4">
-                      <div className="text-text font-medium mb-1">{complaint.title}</div>
-                      <div className="text-xs text-primary-light">{complaint.category}</div>
-                    </td>
-                    <td className="px-6 py-4 text-primary-light text-sm">{new Date(complaint.created_at).toLocaleDateString()}</td>
-                    <td className="px-6 py-4">
-                      <Badge status={complaint.status} className="capitalize">
-                        {complaint.status}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4">
-                      {isLocked ? (
-                        <Badge status="locked" className="border-rose-200">
-                          <Lock className="w-3 h-3 mr-1" /> {isLockedByMe ? 'Locked by you' : `Locked by Admin ${complaint.locked_by}`}
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-primary flex items-center gap-1">
-                          <Unlock className="w-3 h-3" /> Available
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                      <div className="flex-1 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] font-bold text-primary/40 tracking-widest uppercase">CMP-{complaint.id}</span>
+                          <Badge variant={status === 'resolved' ? 'success' : status === 'progress' ? 'warning' : 'default'}>
+                            {complaint.status}
+                          </Badge>
+                          {isLocked && (
+                            <Badge variant="locked">
+                              <Lock className="w-3 h-3 mr-1" /> {isLockedByMe ? 'My Lock' : 'Locked'}
+                            </Badge>
+                          )}
+                        </div>
+                        <div>
+                          <h4 className="text-xl font-bold text-primary mb-1">{complaint.title}</h4>
+                          <p className="text-primary/70 text-sm line-clamp-2">{complaint.description}</p>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs font-medium text-primary/40">
+                          <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date().toLocaleDateString()}</span>
+                          <span className="flex items-center gap-1"><Users className="w-3 h-3" /> Student ID: {complaint.student_id}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 self-end md:self-center">
                         <button 
                           onClick={() => toggleLock(complaint.id, adminId)}
                           disabled={isLockedByOther}
-                          className={`p-2 rounded-lg transition-colors border ${
-                            isLockedByOther ? 'text-gray-400 border-gray-200 cursor-not-allowed' :
-                            isLockedByMe ? 'bg-rose-100 text-rose-600 border-rose-200 hover:bg-rose-200' : 
-                            'bg-white text-primary border-primary/20 hover:bg-primary/5'
+                          className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all border-2 ${
+                            isLockedByOther ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed' :
+                            isLockedByMe ? 'bg-rose-50 border-rose-200 text-rose-500 hover:bg-rose-100 shadow-lg shadow-rose-100' : 
+                            'bg-white border-primary/10 text-primary hover:border-primary/30'
                           }`}
-                          title={isLockedByMe ? "Unlock record" : "Lock for editing"}
+                          title={isLockedByMe ? "Release lock" : "Lock for processing"}
                         >
-                          {isLockedByMe ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                          {isLockedByMe ? <Unlock className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
                         </button>
                         
                         <Button 
-                          variant={complaint.status === 'resolved' ? 'outline' : 'accent'}
-                          className="px-3 py-1.5 text-xs h-auto w-24 shadow-none"
+                          variant={status === 'resolved' ? 'outline' : 'accent'}
+                          className="h-12 px-6 rounded-xl text-sm font-bold shadow-lg min-w-[140px]"
                           disabled={!isLockedByMe}
                           onClick={() => handleUpdateStatus(complaint.id, complaint.status)}
                         >
-                          {complaint.status === 'pending' ? 'Start Work' : complaint.status === 'progress' ? 'Resolve' : 'Reopen'}
+                          {status === 'pending' ? 'Accept Issue' : 
+                           status === 'progress' ? 'Mark Resolved' : 'Reopen Request'}
                         </Button>
                       </div>
-                    </td>
-                  </motion.tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {filteredComplaints.length === 0 && (
-            <div className="p-8 text-center text-primary-light">
-              No complaints found matching this filter.
-            </div>
+                    </div>
+                  </GlassCard>
+                </motion.div>
+              );
+            })
           )}
-        </div>
-      </GlassCard>
-    </>
-  );
-
-  const renderStudents = () => (
-    <div className="space-y-6 max-w-4xl mx-auto w-full">
-      <h2 className="text-2xl font-bold text-text mb-6">Manage Students</h2>
-      <GlassCard className="p-8 text-center border-dashed border-primary/30 bg-primary/5">
-         <Users className="w-12 h-12 text-primary mx-auto mb-4" />
-         <h3 className="text-xl font-bold text-text">Student Directory</h3>
-         <p className="text-primary-light mt-2">The student directory module will be integrated here.</p>
-      </GlassCard>
+        </AnimatePresence>
+      </div>
     </div>
   );
 
   const renderDashboard = () => (
-    <div className="space-y-6 w-full">
-       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-         <GlassCard className="p-6 border-primary/10">
-           <h3 className="text-primary-light text-sm font-medium mb-2">System Status</h3>
-           <div className="text-emerald-600 text-xl font-bold flex items-center gap-2"><Check className="w-5 h-5"/> DB Connected</div>
-         </GlassCard>
-         <GlassCard className="p-6 border-primary/10">
-           <h3 className="text-primary-light text-sm font-medium mb-2">Pending Actions</h3>
-           <div className="text-amber-600 text-2xl font-bold flex items-center gap-2">{complaints.filter(c => c.status === 'pending').length} Needs Review</div>
-         </GlassCard>
-         <GlassCard className="p-6 border-primary/10">
-           <h3 className="text-primary-light text-sm font-medium mb-2">Total Issues</h3>
-           <div className="text-primary text-2xl font-bold flex items-center gap-2">{complaints.length} Recorded</div>
-         </GlassCard>
-       </div>
-       {renderComplaintsTable()}
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <GlassCard className="p-6 bg-emerald-50/30 border-emerald-100">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 rounded-xl bg-emerald-100 text-emerald-600">
+              <Check className="w-6 h-6" />
+            </div>
+            <Badge variant="success">Online</Badge>
+          </div>
+          <h3 className="text-emerald-900 text-xl font-bold">DB Status</h3>
+          <p className="text-emerald-700/60 text-sm">System synchronized with MySQL</p>
+        </GlassCard>
+
+        <GlassCard className="p-6 bg-amber-50/30 border-amber-100">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 rounded-xl bg-amber-100 text-amber-600">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <Badge variant="warning">Attention</Badge>
+          </div>
+          <h3 className="text-amber-900 text-xl font-bold">{complaints.filter(c => c.status.toLowerCase() === 'pending').length} Pending</h3>
+          <p className="text-amber-700/60 text-sm">Requests awaiting review</p>
+        </GlassCard>
+
+        <GlassCard className="p-6 bg-primary/5 border-primary/10">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 rounded-xl bg-primary/10 text-primary">
+              <ListChecks className="w-6 h-6" />
+            </div>
+            <Badge variant="default">Lifetime</Badge>
+          </div>
+          <h3 className="text-primary text-xl font-bold">{complaints.length} Total Issues</h3>
+          <p className="text-primary/60 text-sm">Total complaints recorded</p>
+        </GlassCard>
+      </div>
+
+      {renderComplaintsTable()}
     </div>
   );
 
   const currentPath = location.pathname;
 
   return (
-    <div className="max-w-6xl mx-auto w-full">
+    <div className="max-w-6xl mx-auto w-full pb-10">
       {currentPath === '/admin/complaints' ? renderComplaintsTable() :
-       currentPath === '/admin/students' ? renderStudents() :
+       currentPath === '/admin/students' ? (
+         <div className="py-20 text-center space-y-4">
+           <Users className="w-16 h-16 text-primary/20 mx-auto" />
+           <h2 className="text-2xl font-bold text-primary">Student Management</h2>
+           <p className="text-primary/60 max-w-md mx-auto">This module is currently being optimized for large datasets. Check back soon for student profile management.</p>
+         </div>
+       ) :
        renderDashboard()}
     </div>
   );
