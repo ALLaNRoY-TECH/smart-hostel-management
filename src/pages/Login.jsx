@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Shield, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { GlassCard } from '../components/ui/GlassCard';
@@ -90,6 +90,15 @@ export function Login({ role }) {
               </div>
             ) : "Sign In"}
           </Button>
+
+          {role === 'student' && (
+            <p className="text-center text-sm text-primary/60 mt-4">
+              Don't have an account?{' '}
+              <Link to="/register" className="text-primary font-bold hover:underline">
+                Sign up here
+              </Link>
+            </p>
+          )}
         </form>
       </GlassCard>
     </div>

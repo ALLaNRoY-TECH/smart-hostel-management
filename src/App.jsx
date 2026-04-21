@@ -5,6 +5,7 @@ import { StudentDashboard } from './pages/StudentDashboard';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { Login } from './pages/Login';
+import { Register } from './pages/Register';
 
 const ProtectedRoute = ({ children, allowedRole }) => {
   const { user } = useAppContext();
@@ -19,6 +20,7 @@ function AppRoutes() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login/student" element={<Login role="student" />} />
       <Route path="/login/admin" element={<Login role="admin" />} />
+      <Route path="/register" element={<Register />} />
       
       {/* Student Routes */}
       <Route path="/student/*" element={<ProtectedRoute allowedRole="student"><StudentDashboard /></ProtectedRoute>} />

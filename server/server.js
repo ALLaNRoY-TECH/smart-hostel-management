@@ -41,6 +41,34 @@ app.post('/api/student/login', async (req, res) => {
   }
 });
 
+// 📝 Student Register
+app.post('/api/student/register', async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: "Missing fields" });
+    }
+
+    // Check if user exists
+    const [existing] = await db.query('SELECT * FROM students WHERE email = ?', [email]);
+    if (existing.length > 0) {
+      return res.status(400).json({ success: false, message: "Email already exists" });
+    }
+
+    const [result] = await db.query(
+      'INSERT INTO students (name, email, password) VALUES (?, ?, ?)',
+      [name, email, password]
+    );
+
+    res.json({ success: true, id: result.insertId });
+
+  } catch (error) {
+    console.error("REGISTER ERROR:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // 🔐 Admin Login
 app.post('/api/admin/login', async (req, res) => {
   try {
