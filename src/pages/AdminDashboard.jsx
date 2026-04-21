@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Lock, 
@@ -21,22 +21,31 @@ import { useAppContext } from '../context/AppContext';
 import { useLocation } from 'react-router-dom';
 
 export function AdminDashboard() {
-  const { complaints, updateComplaintStatus, toggleLock, user } = useAppContext();
+  const { complaints, updateComplaintStatus, toggleLock, user, fetchComplaints } = useAppContext();
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const adminId = user?.id;
   const location = useLocation();
 
-  const filteredComplaints = complaints.filter(c => {
-    const matchesFilter = filter === 'all' || c.status.toLowerCase() === filter.toLowerCase();
-    const matchesSearch = c.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         c.id.toString().includes(searchTerm);
+  useEffect(() => {
+    if (user) fetchComplaints();
+  }, [user]);
+
+  const filteredComplaints = (complaints || []).filter(c => {
+    const status = c.status || 'Pending';
+    const title = c.title || '';
+    const id = c.id || '';
+    
+    const matchesFilter = filter === 'all' || status.toLowerCase() === filter.toLowerCase();
+    const matchesSearch = title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         id.toString().includes(searchTerm);
     return matchesFilter && matchesSearch;
   });
 
   const handleUpdateStatus = (id, currentStatus) => {
-    const nextStatus = currentStatus.toLowerCase() === 'pending' ? 'progress' : 
-                      currentStatus.toLowerCase() === 'progress' ? 'resolved' : 'pending';
+    const status = currentStatus || 'Pending';
+    const nextStatus = status.toLowerCase() === 'pending' ? 'progress' : 
+                      status.toLowerCase() === 'progress' ? 'resolved' : 'pending';
     updateComplaintStatus(id, nextStatus);
   };
 
@@ -89,7 +98,7 @@ export function AdminDashboard() {
               const isLocked = complaint.locked_by !== null;
               const isLockedByMe = complaint.locked_by === adminId;
               const isLockedByOther = isLocked && !isLockedByMe;
-              const status = complaint.status.toLowerCase();
+              const status = (complaint.status || 'Pending').toLowerCase();
 
               return (
                 <motion.div
