@@ -8,7 +8,7 @@ import {
   Users, 
   AlertTriangle, 
   LayoutDashboard, 
-  ListChecks, 
+  List, 
   Search,
   Filter,
   MoreHorizontal,
@@ -26,6 +26,9 @@ export function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const adminId = user?.id;
   const location = useLocation();
+
+  console.log("AdminDashboard User:", user);
+  console.log("AdminDashboard Complaints:", complaints);
 
   useEffect(() => {
     if (user) fetchComplaints();
@@ -195,14 +198,14 @@ export function AdminDashboard() {
             </div>
             <Badge variant="warning">Attention</Badge>
           </div>
-          <h3 className="text-amber-900 text-xl font-bold">{complaints.filter(c => c.status.toLowerCase() === 'pending').length} Pending</h3>
+          <h3 className="text-amber-900 text-xl font-bold">{(complaints || []).filter(c => (c.status || 'Pending').toLowerCase() === 'pending').length} Pending</h3>
           <p className="text-amber-700/60 text-sm">Requests awaiting review</p>
         </GlassCard>
 
         <GlassCard className="p-6 bg-primary/5 border-primary/10">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 rounded-xl bg-primary/10 text-primary">
-              <ListChecks className="w-6 h-6" />
+              <List className="w-6 h-6" />
             </div>
             <Badge variant="default">Lifetime</Badge>
           </div>
