@@ -131,19 +131,38 @@ app.post('/api/complaints', async (req, res) => {
   }
 });
 
-// ✏️ Update complaint status
+// ✏️ Update complaint status or lock
 app.put('/api/complaints/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
-    await db.query(
-      'UPDATE complaints SET status = ? WHERE id = ?',
-      [status, id]
-    );
+    const { status, locked_by } = req.body;
+
+    // Build dynamic query
+    let updates = [];
+    let params = [];
+
+    if (status !== undefined) {
+      updates.push('status = ?');
+      params.push(status);
+    }
+
+    if (locked_by !== undefined) {
+      updates.push('locked_by = ?');
+      params.push(locked_by);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ success: false, message: "No fields to update" });
+    }
+
+    params.push(id);
+    const query = `UPDATE complaints SET ${updates.join(', ')} WHERE id = ?`;
+    
+    await db.query(query, params);
     res.json({ success: true });
   } catch (error) {
-    console.error("Update Complaint Error:", error.message);
-    res.status(500).json({ success: false, error: "Server Error" });
+    console.error("Update Complaint Error:", error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
