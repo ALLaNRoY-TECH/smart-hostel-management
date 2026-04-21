@@ -20,6 +20,11 @@ app.get("/", (req, res) => {
 app.post('/api/student/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: "Missing fields" });
+    }
+
     const [rows] = await db.query(
       'SELECT * FROM students WHERE email = ? AND password = ?',
       [email, password]
@@ -31,8 +36,8 @@ app.post('/api/student/login', async (req, res) => {
       res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
   } catch (error) {
-    console.error("Login Error:", error.message);
-    res.status(500).json({ success: false, error: "Server Error" });
+    console.error("LOGIN ERROR:", error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -40,6 +45,11 @@ app.post('/api/student/login', async (req, res) => {
 app.post('/api/admin/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: "Missing fields" });
+    }
+
     const [rows] = await db.query(
       'SELECT * FROM admins WHERE email = ? AND password = ?',
       [email, password]
@@ -51,8 +61,8 @@ app.post('/api/admin/login', async (req, res) => {
       res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
   } catch (error) {
-    console.error("Admin Login Error:", error.message);
-    res.status(500).json({ success: false, error: "Server Error" });
+    console.error("ADMIN LOGIN ERROR:", error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
