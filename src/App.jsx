@@ -1,0 +1,44 @@
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AppProvider, useAppContext } from './context/AppContext';
+import { LandingPage } from './pages/LandingPage';
+import { StudentDashboard } from './pages/StudentDashboard';
+import { AdminDashboard } from './pages/AdminDashboard';
+import { DashboardLayout } from './layouts/DashboardLayout';
+import { Login } from './pages/Login';
+
+const ProtectedRoute = ({ children, allowedRole }) => {
+  const { user } = useAppContext();
+  if (!user) return <Navigate to={`/login/${allowedRole}`} />;
+  if (user.role !== allowedRole) return <Navigate to="/" />;
+  return <DashboardLayout role={allowedRole}>{children}</DashboardLayout>;
+};
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login/student" element={<Login role="student" />} />
+      <Route path="/login/admin" element={<Login role="admin" />} />
+      
+      {/* Student Routes */}
+      <Route path="/student/*" element={<ProtectedRoute allowedRole="student"><StudentDashboard /></ProtectedRoute>} />
+      
+      {/* Admin Routes */}
+      <Route path="/admin/*" element={<ProtectedRoute allowedRole="admin"><AdminDashboard /></ProtectedRoute>} />
+      
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+function App() {
+  return (
+    <AppProvider>
+      <Router>
+        <AppRoutes />
+      </Router>
+    </AppProvider>
+  );
+}
+
+export default App;
