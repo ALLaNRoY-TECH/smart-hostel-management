@@ -20,16 +20,13 @@ app.get("/", (req, res) => {
 app.post('/api/student/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-
     if (!email || !password) {
       return res.status(400).json({ success: false, message: "Missing fields" });
     }
-
     const [rows] = await db.query(
       'SELECT * FROM students WHERE email = ? AND password = ?',
       [email, password]
     );
-
     if (rows.length > 0) {
       res.json({ success: true, user: rows[0] });
     } else {
@@ -45,24 +42,18 @@ app.post('/api/student/login', async (req, res) => {
 app.post('/api/student/register', async (req, res) => {
   try {
     const { name, email, password } = req.body;
-
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: "Missing fields" });
     }
-
-    // Check if user exists
     const [existing] = await db.query('SELECT * FROM students WHERE email = ?', [email]);
     if (existing.length > 0) {
       return res.status(400).json({ success: false, message: "Email already exists" });
     }
-
     const [result] = await db.query(
       'INSERT INTO students (name, email, password) VALUES (?, ?, ?)',
       [name, email, password]
     );
-
     res.json({ success: true, id: result.insertId });
-
   } catch (error) {
     console.error("REGISTER ERROR:", error);
     res.status(500).json({ success: false, error: error.message });
@@ -73,16 +64,13 @@ app.post('/api/student/register', async (req, res) => {
 app.post('/api/admin/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-
     if (!email || !password) {
       return res.status(400).json({ success: false, message: "Missing fields" });
     }
-
     const [rows] = await db.query(
       'SELECT * FROM admins WHERE email = ? AND password = ?',
       [email, password]
     );
-
     if (rows.length > 0) {
       res.json({ success: true, user: rows[0] });
     } else {
@@ -96,16 +84,29 @@ app.post('/api/admin/login', async (req, res) => {
 
 // ================= COMPLAINTS =================
 
-// 📊 Get complaints
+// 📊 Get all complaints (admin) or student-specific complaints
 app.get('/api/complaints', async (req, res) => {
   try {
     const { studentId } = req.query;
-    let query = 'SELECT * FROM complaints ORDER BY created_at DESC';
-    let params = [];
+    let query, params;
 
     if (studentId) {
-      query = 'SELECT * FROM complaints WHERE student_id = ? ORDER BY created_at DESC';
+      query = `
+        SELECT c.*, s.name AS student_name
+        FROM complaints c
+        LEFT JOIN students s ON c.student_id = s.id
+        WHERE c.student_id = ?
+        ORDER BY c.created_at DESC
+      `;
       params = [studentId];
+    } else {
+      query = `
+        SELECT c.*, s.name AS student_name
+        FROM complaints c
+        LEFT JOIN students s ON c.student_id = s.id
+        ORDER BY c.created_at DESC
+      `;
+      params = [];
     }
 
     const [rows] = await db.query(query, params);
@@ -120,9 +121,12 @@ app.get('/api/complaints', async (req, res) => {
 app.post('/api/complaints', async (req, res) => {
   try {
     const { student_id, title, description } = req.body;
+    if (!student_id || !title || !description) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
     const [result] = await db.query(
       'INSERT INTO complaints (student_id, title, description, status) VALUES (?, ?, ?, ?)',
-      [student_id, title, description, 'Pending']
+      [student_id, title, description, 'pending']
     );
     res.json({ success: true, insertId: result.insertId });
   } catch (error) {
@@ -131,19 +135,49 @@ app.post('/api/complaints', async (req, res) => {
   }
 });
 
-// ✏️ Update complaint status or lock
+// ✏️ Update complaint — full workflow with locking protection
 app.put('/api/complaints/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, locked_by } = req.body;
+    const { status, assigned_worker, locked_by } = req.body;
 
-    // Build dynamic query
-    let updates = [];
-    let params = [];
+    // ── Fetch current complaint state ──
+    const [existing] = await db.query('SELECT * FROM complaints WHERE id = ?', [id]);
+    if (existing.length === 0) {
+      return res.status(404).json({ success: false, message: "Complaint not found" });
+    }
+    const complaint = existing[0];
+
+    // ── Concurrency lock protection ──
+    // If another admin owns the lock and the requesting admin is different, reject.
+    if (
+      complaint.locked_by !== null &&
+      locked_by !== undefined &&
+      locked_by !== null &&
+      complaint.locked_by !== locked_by
+    ) {
+      return res.status(409).json({
+        success: false,
+        message: "This complaint is currently locked by another admin."
+      });
+    }
+
+    // ── Build dynamic UPDATE ──
+    const updates = [];
+    const params = [];
 
     if (status !== undefined) {
+      const validStatuses = ['pending', 'in_progress', 'resolved'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ success: false, message: "Invalid status value" });
+      }
       updates.push('status = ?');
       params.push(status);
+    }
+
+    if (assigned_worker !== undefined) {
+      updates.push('assigned_worker = ?');
+      params.push(assigned_worker);
     }
 
     if (locked_by !== undefined) {
@@ -157,9 +191,17 @@ app.put('/api/complaints/:id', async (req, res) => {
 
     params.push(id);
     const query = `UPDATE complaints SET ${updates.join(', ')} WHERE id = ?`;
-    
     await db.query(query, params);
-    res.json({ success: true });
+
+    // Return updated complaint
+    const [updated] = await db.query(`
+      SELECT c.*, s.name AS student_name
+      FROM complaints c
+      LEFT JOIN students s ON c.student_id = s.id
+      WHERE c.id = ?
+    `, [id]);
+
+    res.json({ success: true, complaint: updated[0] });
   } catch (error) {
     console.error("Update Complaint Error:", error);
     res.status(500).json({ success: false, error: error.message });
@@ -169,7 +211,6 @@ app.put('/api/complaints/:id', async (req, res) => {
 // ================= SERVER START =================
 
 const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
 });

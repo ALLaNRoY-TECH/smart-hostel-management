@@ -14,19 +14,19 @@ export function AppProvider({ children }) {
 
   const fetchComplaints = async () => {
     try {
-      const url = user?.role === 'student' ? `${API_URL}/complaints?studentId=${user.id}` : `${API_URL}/complaints`;
+      const url = user?.role === 'student'
+        ? `${API_URL}/complaints?studentId=${user.id}`
+        : `${API_URL}/complaints`;
       const res = await fetch(url);
       const data = await res.json();
-      if(Array.isArray(data)) setComplaints(data);
+      if (Array.isArray(data)) setComplaints(data);
     } catch (err) {
-      console.error(err);
+      console.error('fetchComplaints error:', err);
     }
   };
 
   useEffect(() => {
-    if (user) {
-      fetchComplaints();
-    }
+    if (user) fetchComplaints();
   }, [user]);
 
   const addComplaint = async (complaintData) => {
@@ -36,39 +36,51 @@ export function AppProvider({ children }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...complaintData, student_id: user.id })
       });
-      if (res.ok) fetchComplaints();
+      if (res.ok) await fetchComplaints();
     } catch (err) {
-      console.error(err);
+      console.error('addComplaint error:', err);
     }
   };
 
-  const updateComplaintStatus = async (id, newStatus) => {
+  /**
+   * Universal complaint update — accepts any combination of:
+   *   { status, assigned_worker, locked_by }
+   * Updates state optimistically from the server response.
+   */
+  const updateComplaint = async (id, fields) => {
     try {
       const res = await fetch(`${API_URL}/complaints/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus, locked_by: null })
+        body: JSON.stringify(fields)
       });
-      if (res.ok) fetchComplaints();
+      const data = await res.json();
+      if (data.success && data.complaint) {
+        // Optimistic local update — no full refetch needed
+        setComplaints(prev =>
+          prev.map(c => (c.id === id ? { ...c, ...data.complaint } : c))
+        );
+      } else {
+        // Fallback: refetch on any server error message
+        await fetchComplaints();
+        if (!data.success) throw new Error(data.message || 'Update failed');
+      }
+      return data;
     } catch (err) {
-      console.error(err);
+      console.error('updateComplaint error:', err);
+      throw err;
     }
+  };
+
+  // Legacy helpers — kept for backward compatibility
+  const updateComplaintStatus = async (id, newStatus) => {
+    return updateComplaint(id, { status: newStatus, locked_by: null });
   };
 
   const toggleLock = async (id, adminId) => {
-    try {
-      const complaint = complaints.find(c => c.id === id);
-      const isLockedByMe = complaint.locked_by === adminId;
-      
-      const res = await fetch(`${API_URL}/complaints/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ locked_by: isLockedByMe ? null : adminId })
-      });
-      if (res.ok) fetchComplaints();
-    } catch (err) {
-      console.error(err);
-    }
+    const complaint = complaints.find(c => c.id === id);
+    const isLockedByMe = complaint?.locked_by === adminId;
+    return updateComplaint(id, { locked_by: isLockedByMe ? null : adminId });
   };
 
   const login = async (email, password, role) => {
@@ -88,7 +100,7 @@ export function AppProvider({ children }) {
       }
       return false;
     } catch (err) {
-      console.error(err);
+      console.error('login error:', err);
       return false;
     } finally {
       setLoading(false);
@@ -102,7 +114,18 @@ export function AppProvider({ children }) {
   };
 
   return (
-    <AppContext.Provider value={{ complaints, user, login, logout, loading, addComplaint, updateComplaintStatus, toggleLock, fetchComplaints }}>
+    <AppContext.Provider value={{
+      complaints,
+      user,
+      login,
+      logout,
+      loading,
+      addComplaint,
+      updateComplaint,
+      updateComplaintStatus,
+      toggleLock,
+      fetchComplaints
+    }}>
       {children}
     </AppContext.Provider>
   );

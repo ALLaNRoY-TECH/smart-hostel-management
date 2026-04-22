@@ -1,16 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  PlusCircle, 
-  Clock, 
-  CheckCircle2, 
-  AlertCircle, 
-  User as UserIcon, 
-  Send, 
-  LayoutDashboard, 
+import {
+  PlusCircle,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Send,
   History,
   AlertTriangle,
-  Loader2
+  Loader2,
+  Wrench,
+  UserCheck
 } from 'lucide-react';
 import { GlassCard } from '../components/ui/GlassCard';
 import { Button } from '../components/ui/Button';
@@ -56,10 +56,12 @@ export function StudentDashboard() {
     loadData();
   }, [user]);
 
+  const normalize = (s) => (s || 'pending').toLowerCase();
   const stats = [
-    { label: 'Total', value: complaints.length, icon: AlertCircle, color: 'text-primary' },
-    { label: 'Pending', value: complaints.filter(c => c.status === 'Pending').length, icon: Clock, color: 'text-amber-600' },
-    { label: 'Resolved', value: complaints.filter(c => c.status === 'Resolved').length, icon: CheckCircle2, color: 'text-green-600' },
+    { label: 'Total',       value: complaints.length,                                                             icon: AlertCircle,  color: 'text-primary'  },
+    { label: 'Pending',     value: complaints.filter(c => normalize(c.status) === 'pending').length,              icon: Clock,        color: 'text-amber-600'},
+    { label: 'In Progress', value: complaints.filter(c => normalize(c.status) === 'in_progress').length,          icon: Wrench,       color: 'text-blue-600' },
+    { label: 'Resolved',    value: complaints.filter(c => normalize(c.status) === 'resolved').length,             icon: CheckCircle2, color: 'text-green-600'},
   ];
 
   const handleSubmit = async (e) => {
@@ -139,18 +141,17 @@ export function StudentDashboard() {
             className="space-y-8"
           >
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {stats.map((stat, i) => (
-                <GlassCard key={i} className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`p-3 rounded-xl bg-primary/5 ${stat.color}`}>
-                      <stat.icon className="w-6 h-6" />
+                <GlassCard key={i} className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className={`p-2.5 rounded-xl bg-primary/5 ${stat.color}`}>
+                      <stat.icon className="w-5 h-5" />
                     </div>
-                    <Badge variant="outline" className="opacity-50">This Month</Badge>
                   </div>
-                  <div className="space-y-1">
-                    <h3 className="text-4xl font-bold text-primary">{stat.value}</h3>
-                    <p className="text-sm font-medium text-primary/60 uppercase tracking-wider">{stat.label}</p>
+                  <div className="space-y-0.5">
+                    <h3 className="text-3xl font-bold text-primary">{stat.value}</h3>
+                    <p className="text-xs font-medium text-primary/60 uppercase tracking-wider">{stat.label}</p>
                   </div>
                 </GlassCard>
               ))}
@@ -163,8 +164,8 @@ export function StudentDashboard() {
                   <h3 className="text-xl font-bold text-primary flex items-center gap-2">
                     <History className="w-5 h-5" /> Recent Requests
                   </h3>
-                  <button 
-                    onClick={() => setActiveTab('history')}
+                  <button
+                    onClick={() => navigate('/student/list')}
                     className="text-sm font-semibold text-accent hover:text-accent-dark transition-colors"
                   >
                     View All
@@ -177,20 +178,35 @@ export function StudentDashboard() {
                       <p className="text-primary/40 italic">No complaints raised yet</p>
                     </div>
                   ) : (
-                    complaints.slice(0, 3).map((c) => (
-                      <div key={c.id} className="p-4 rounded-xl bg-white/40 border border-primary/5 hover:border-primary/20 transition-all group">
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-bold text-primary group-hover:text-accent transition-colors">{c.title}</h4>
-                          <Badge variant={c.status === 'Resolved' ? 'success' : 'warning'}>
-                            {c.status}
-                          </Badge>
+                    complaints.slice(0, 3).map((c) => {
+                      const s = (c.status || 'pending').toLowerCase();
+                      return (
+                        <div key={c.id} className="p-4 rounded-xl bg-white/40 border border-primary/5 hover:border-primary/20 transition-all group">
+                          <div className="flex justify-between items-start mb-2 gap-2">
+                            <h4 className="font-bold text-primary group-hover:text-accent transition-colors">{c.title}</h4>
+                            <span className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase ${
+                              s === 'resolved'    ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                              s === 'in_progress' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                              'bg-amber-100 text-amber-700 border-amber-200'
+                            }`}>
+                              {s === 'resolved' && <CheckCircle2 className="w-2.5 h-2.5" />}
+                              {s === 'in_progress' && <Wrench className="w-2.5 h-2.5" />}
+                              {s === 'pending' && <Clock className="w-2.5 h-2.5" />}
+                              {s === 'in_progress' ? 'In Progress' : s.charAt(0).toUpperCase() + s.slice(1)}
+                            </span>
+                          </div>
+                          <p className="text-sm text-primary/70 line-clamp-2">{c.description}</p>
+                          <div className="mt-3 flex items-center justify-between text-[10px] text-primary/40 font-medium">
+                            <span>REF: #{c.id?.toString().padStart(4, '0')}</span>
+                            {c.assigned_worker && (
+                              <span className="flex items-center gap-1 text-blue-600">
+                                <UserCheck className="w-3 h-3" /> {c.assigned_worker}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-sm text-primary/70 line-clamp-2">{c.description}</p>
-                        <div className="mt-3 text-[10px] text-primary/40 font-medium">
-                          REF: #{c.id?.toString().padStart(4, '0')}
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </GlassCard>
@@ -263,29 +279,56 @@ export function StudentDashboard() {
                   <p className="text-primary/60 font-medium">No complaints found in your history.</p>
                 </GlassCard>
               ) : (
-                complaints.map((c) => (
-                  <GlassCard key={c.id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3">
-                        <h4 className="text-lg font-bold text-primary">{c.title}</h4>
-                        <Badge variant={c.status === 'Resolved' ? 'success' : 'warning'}>
-                          {c.status}
-                        </Badge>
+                complaints.map((c) => {
+                  const s = (c.status || 'pending').toLowerCase();
+                  return (
+                    <GlassCard
+                      key={c.id}
+                      className={`p-6 border-l-4 flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                        s === 'resolved'    ? 'border-l-emerald-400' :
+                        s === 'in_progress' ? 'border-l-blue-400'    :
+                        'border-l-amber-400'
+                      }`}
+                    >
+                      <div className="space-y-2 flex-1">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <h4 className="text-lg font-bold text-primary">{c.title}</h4>
+                          <span className={`inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-bold border uppercase ${
+                            s === 'resolved'    ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                            s === 'in_progress' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                            'bg-amber-100 text-amber-700 border-amber-200'
+                          }`}>
+                            {s === 'resolved'    && <CheckCircle2 className="w-3 h-3" />}
+                            {s === 'in_progress' && <Wrench className="w-3 h-3" />}
+                            {s === 'pending'     && <Clock className="w-3 h-3" />}
+                            {s === 'in_progress' ? 'In Progress' : s.charAt(0).toUpperCase() + s.slice(1)}
+                          </span>
+                        </div>
+                        <p className="text-primary/70 max-w-2xl text-sm">{c.description}</p>
+                        <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-primary/40">
+                          <span>REF: #{c.id?.toString().padStart(4, '0')}</span>
+                          <span>•</span>
+                          <span>{c.created_at ? new Date(c.created_at).toLocaleDateString() : new Date().toLocaleDateString()}</span>
+                          {c.assigned_worker && (
+                            <span className="flex items-center gap-1 text-blue-600 font-semibold">
+                              <UserCheck className="w-3 h-3" /> {c.assigned_worker}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-primary/70 max-w-2xl">{c.description}</p>
-                      <div className="flex items-center gap-4 text-xs font-medium text-primary/40">
-                        <span>REF: #{c.id?.toString().padStart(4, '0')}</span>
-                        <span>•</span>
-                        <span>{new Date().toLocaleDateString()}</span> {/* Ideally from DB */}
-                      </div>
-                    </div>
-                    {c.status === 'Resolved' && (
-                      <div className="flex items-center gap-2 text-green-600 bg-green-50 px-4 py-2 rounded-full text-sm font-bold">
-                        <CheckCircle2 className="w-4 h-4" /> Fixed
-                      </div>
-                    )}
-                  </GlassCard>
-                ))
+                      {s === 'resolved' && (
+                        <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-4 py-2 rounded-full text-sm font-bold border border-emerald-200 shrink-0">
+                          <CheckCircle2 className="w-4 h-4" /> Fixed
+                        </div>
+                      )}
+                      {s === 'in_progress' && (
+                        <div className="flex items-center gap-2 text-blue-600 bg-blue-50 px-4 py-2 rounded-full text-sm font-bold border border-blue-200 shrink-0">
+                          <Wrench className="w-4 h-4" /> In Progress
+                        </div>
+                      )}
+                    </GlassCard>
+                  );
+                })
               )}
             </div>
           </motion.div>
