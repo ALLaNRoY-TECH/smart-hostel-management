@@ -42,7 +42,6 @@ export function Navbar() {
 
 const features = [
   { icon: MessageSquare, title: 'Complaint Management', desc: 'Raise and track issues in real-time.' },
-  { icon: Key, title: 'Room Allocation', desc: 'Automated and transparent room assignments.' },
   { icon: Activity, title: 'Real-time Updates', desc: 'Instant notifications on your requests.' },
   { icon: ShieldCheck, title: 'Admin Control', desc: 'Complete oversight with concurrency locks.' }
 ];
@@ -89,7 +88,7 @@ export function LandingPage() {
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+            className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto"
           >
             {features.map((feature, i) => (
               <motion.div

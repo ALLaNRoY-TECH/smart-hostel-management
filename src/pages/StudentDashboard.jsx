@@ -10,14 +10,13 @@ import {
   AlertTriangle,
   Loader2,
   Wrench,
-  UserCheck
+  UserCheck,
+  XCircle
 } from 'lucide-react';
 import { GlassCard } from '../components/ui/GlassCard';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { useAppContext } from '../context/AppContext';
-
-
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export function StudentDashboard() {
@@ -29,7 +28,6 @@ export function StudentDashboard() {
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({ title: '', desc: '' });
 
-  // Map path to active tab logic
   const getActiveTab = () => {
     const path = location.pathname;
     if (path.includes('/student/raise')) return 'raise';
@@ -56,12 +54,18 @@ export function StudentDashboard() {
     loadData();
   }, [user]);
 
-  const normalize = (s) => (s || 'pending').toLowerCase();
+  // Derived status logic
+  const getDisplayStatus = (c) => {
+    if (c.assigned_worker === 'REJECTED') return 'rejected';
+    return (c.status || 'pending').toLowerCase();
+  };
+
   const stats = [
-    { label: 'Total',       value: complaints.length,                                                             icon: AlertCircle,  color: 'text-primary'  },
-    { label: 'Pending',     value: complaints.filter(c => normalize(c.status) === 'pending').length,              icon: Clock,        color: 'text-amber-600'},
-    { label: 'In Progress', value: complaints.filter(c => normalize(c.status) === 'in_progress').length,          icon: Wrench,       color: 'text-blue-600' },
-    { label: 'Resolved',    value: complaints.filter(c => normalize(c.status) === 'resolved').length,             icon: CheckCircle2, color: 'text-green-600'},
+    { label: 'Total',       value: complaints.length,                                             icon: AlertCircle,  color: 'text-gray-600',   bg: 'bg-gray-100' },
+    { label: 'Pending',     value: complaints.filter(c => getDisplayStatus(c) === 'pending').length, icon: Clock,        color: 'text-yellow-600', bg: 'bg-yellow-100' },
+    { label: 'In Progress', value: complaints.filter(c => getDisplayStatus(c) === 'in_progress').length, icon: Wrench,       color: 'text-blue-600',   bg: 'bg-blue-100' },
+    { label: 'Resolved',    value: complaints.filter(c => getDisplayStatus(c) === 'resolved').length, icon: CheckCircle2, color: 'text-green-600',  bg: 'bg-green-100' },
+    { label: 'Rejected',    value: complaints.filter(c => getDisplayStatus(c) === 'rejected').length, icon: XCircle,      color: 'text-red-600',    bg: 'bg-red-100' },
   ];
 
   const handleSubmit = async (e) => {
@@ -141,11 +145,11 @@ export function StudentDashboard() {
             className="space-y-8"
           >
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {stats.map((stat, i) => (
                 <GlassCard key={i} className="p-5">
                   <div className="flex items-center justify-between mb-3">
-                    <div className={`p-2.5 rounded-xl bg-primary/5 ${stat.color}`}>
+                    <div className={`p-2.5 rounded-xl ${stat.bg} ${stat.color}`}>
                       <stat.icon className="w-5 h-5" />
                     </div>
                   </div>
@@ -179,26 +183,36 @@ export function StudentDashboard() {
                     </div>
                   ) : (
                     complaints.slice(0, 3).map((c) => {
-                      const s = (c.status || 'pending').toLowerCase();
+                      const s = getDisplayStatus(c);
                       return (
                         <div key={c.id} className="p-4 rounded-xl bg-white/40 border border-primary/5 hover:border-primary/20 transition-all group">
                           <div className="flex justify-between items-start mb-2 gap-2">
                             <h4 className="font-bold text-primary group-hover:text-accent transition-colors">{c.title}</h4>
                             <span className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase ${
-                              s === 'resolved'    ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                              s === 'resolved'    ? 'bg-green-100 text-green-700 border-green-200' :
                               s === 'in_progress' ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                              'bg-amber-100 text-amber-700 border-amber-200'
+                              s === 'rejected'    ? 'bg-red-100 text-red-700 border-red-200' :
+                              'bg-yellow-100 text-yellow-700 border-yellow-200'
                             }`}>
                               {s === 'resolved' && <CheckCircle2 className="w-2.5 h-2.5" />}
                               {s === 'in_progress' && <Wrench className="w-2.5 h-2.5" />}
                               {s === 'pending' && <Clock className="w-2.5 h-2.5" />}
+                              {s === 'rejected' && <XCircle className="w-2.5 h-2.5" />}
                               {s === 'in_progress' ? 'In Progress' : s.charAt(0).toUpperCase() + s.slice(1)}
                             </span>
                           </div>
-                          <p className="text-sm text-primary/70 line-clamp-2">{c.description}</p>
+                          
+                          {s === 'rejected' ? (
+                            <p className="text-sm text-red-600 bg-red-50 p-2 rounded border border-red-100 italic">
+                              "This request was not approved by the admin as it did not meet hostel guidelines."
+                            </p>
+                          ) : (
+                            <p className="text-sm text-primary/70 line-clamp-2">{c.description}</p>
+                          )}
+                          
                           <div className="mt-3 flex items-center justify-between text-[10px] text-primary/40 font-medium">
                             <span>REF: #{c.id?.toString().padStart(4, '0')}</span>
-                            {c.assigned_worker && (
+                            {c.assigned_worker && c.assigned_worker !== 'REJECTED' && (
                               <span className="flex items-center gap-1 text-blue-600">
                                 <UserCheck className="w-3 h-3" /> {c.assigned_worker}
                               </span>
@@ -280,52 +294,53 @@ export function StudentDashboard() {
                 </GlassCard>
               ) : (
                 complaints.map((c) => {
-                  const s = (c.status || 'pending').toLowerCase();
+                  const s = getDisplayStatus(c);
                   return (
                     <GlassCard
                       key={c.id}
                       className={`p-6 border-l-4 flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-                        s === 'resolved'    ? 'border-l-emerald-400' :
-                        s === 'in_progress' ? 'border-l-blue-400'    :
-                        'border-l-amber-400'
+                        s === 'resolved'    ? 'border-l-green-400' :
+                        s === 'in_progress' ? 'border-l-blue-400'  :
+                        s === 'rejected'    ? 'border-l-red-400'   :
+                        'border-l-yellow-400'
                       }`}
                     >
                       <div className="space-y-2 flex-1">
                         <div className="flex flex-wrap items-center gap-3">
                           <h4 className="text-lg font-bold text-primary">{c.title}</h4>
                           <span className={`inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-bold border uppercase ${
-                            s === 'resolved'    ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                            s === 'resolved'    ? 'bg-green-100 text-green-700 border-green-200' :
                             s === 'in_progress' ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                            'bg-amber-100 text-amber-700 border-amber-200'
+                            s === 'rejected'    ? 'bg-red-100 text-red-700 border-red-200' :
+                            'bg-yellow-100 text-yellow-700 border-yellow-200'
                           }`}>
                             {s === 'resolved'    && <CheckCircle2 className="w-3 h-3" />}
                             {s === 'in_progress' && <Wrench className="w-3 h-3" />}
                             {s === 'pending'     && <Clock className="w-3 h-3" />}
+                            {s === 'rejected'    && <XCircle className="w-3 h-3" />}
                             {s === 'in_progress' ? 'In Progress' : s.charAt(0).toUpperCase() + s.slice(1)}
                           </span>
                         </div>
-                        <p className="text-primary/70 max-w-2xl text-sm">{c.description}</p>
+                        
+                        {s === 'rejected' ? (
+                          <p className="text-sm text-red-600 bg-red-50 p-2 rounded border border-red-100 italic">
+                            "This request was not approved by the admin as it did not meet hostel guidelines."
+                          </p>
+                        ) : (
+                          <p className="text-primary/70 max-w-2xl text-sm">{c.description}</p>
+                        )}
+                        
                         <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-primary/40">
                           <span>REF: #{c.id?.toString().padStart(4, '0')}</span>
                           <span>•</span>
                           <span>{c.created_at ? new Date(c.created_at).toLocaleDateString() : new Date().toLocaleDateString()}</span>
-                          {c.assigned_worker && (
+                          {c.assigned_worker && c.assigned_worker !== 'REJECTED' && (
                             <span className="flex items-center gap-1 text-blue-600 font-semibold">
                               <UserCheck className="w-3 h-3" /> {c.assigned_worker}
                             </span>
                           )}
                         </div>
                       </div>
-                      {s === 'resolved' && (
-                        <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-4 py-2 rounded-full text-sm font-bold border border-emerald-200 shrink-0">
-                          <CheckCircle2 className="w-4 h-4" /> Fixed
-                        </div>
-                      )}
-                      {s === 'in_progress' && (
-                        <div className="flex items-center gap-2 text-blue-600 bg-blue-50 px-4 py-2 rounded-full text-sm font-bold border border-blue-200 shrink-0">
-                          <Wrench className="w-4 h-4" /> In Progress
-                        </div>
-                      )}
                     </GlassCard>
                   );
                 })

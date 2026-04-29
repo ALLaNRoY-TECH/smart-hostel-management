@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { LandingPage } from './pages/LandingPage';
 import { StudentDashboard } from './pages/StudentDashboard';
@@ -6,6 +8,7 @@ import { AdminDashboard } from './pages/AdminDashboard';
 import { DashboardLayout } from './layouts/DashboardLayout';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
+import { IntroScreen } from './components/IntroScreen';
 
 const ProtectedRoute = ({ children, allowedRole }) => {
   const { user } = useAppContext();
@@ -34,8 +37,20 @@ function AppRoutes() {
 }
 
 function App() {
+  const [showIntro, setShowIntro] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowIntro(false);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <AppProvider>
+      <AnimatePresence>
+        {showIntro && <IntroScreen key="intro" />}
+      </AnimatePresence>
       <Router>
         <AppRoutes />
       </Router>
@@ -44,3 +59,4 @@ function App() {
 }
 
 export default App;
+
