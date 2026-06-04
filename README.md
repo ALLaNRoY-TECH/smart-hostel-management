@@ -1,34 +1,78 @@
-# Smart Hostel Management System - Full Stack Edition
+# Smart Hostel Management System
 
-## Prerequisites
-1. **Node.js** installed on your system.
-2. **MySQL Server** installed and running on your local machine (e.g., via XAMPP, WAMP, or standalone MySQL).
+## Overview
 
-## Step 1: Database Setup
-1. Open your MySQL client (e.g., phpMyAdmin, MySQL Workbench, or CLI).
-2. Execute the entire contents of the `server/schema.sql` file. This will:
-   - Create the `hostel_management` database.
-   - Create all tables in 3NF (students, admins, rooms, complaints, allocations, activity_logs).
-   - Insert dummy user data for testing.
+Smart Hostel Management System is a full-stack web application designed to streamline hostel operations by providing a centralized platform for students, wardens, and administrators. The system enables efficient complaint management, issue tracking, communication, and reporting, reducing manual paperwork and improving response times.
 
-## Step 2: Backend Configuration
-1. Navigate to the `server` folder.
-2. Open the `.env` file and update `DB_PASSWORD` if your local MySQL root user has a password. (Leave it blank if you use XAMPP default).
-3. Open a terminal and run the following commands to start the backend API:
-```bash
-cd server
-node server.js
-```
-The backend will run on `http://localhost:5000`.
+## Features
 
-## Step 3: Frontend Startup
-1. Open a new, separate terminal in the root project folder.
-2. Run the frontend development server:
-```bash
-npm run dev
-```
-3. Open `http://localhost:5173` in your browser.
+* Student complaint registration and tracking
+* Real-time complaint status updates
+* Role-based access control for Students, Wardens, and Administrators
+* Complaint categorization and priority management
+* Dashboard for monitoring hostel issues and resolutions
+* Automated notifications for complaint updates
+* Complaint history and reporting system
+* Secure authentication and authorization
+* Responsive and user-friendly interface
 
-## Test Credentials
-- **Student Login:** `student@test.com` / `password`
-- **Admin Login:** `admin@test.com` / `password`
+## Tech Stack
+
+### Frontend
+
+* React.js
+* HTML5
+* CSS3
+* JavaScript
+
+### Backend
+
+* Django
+* Django REST Framework
+
+### Database
+
+* MySQL
+
+### APIs
+
+* REST APIs
+
+## System Roles
+
+### Student
+
+* Submit complaints
+* Track complaint status
+* View complaint history
+
+### Warden
+
+* Review and manage complaints
+* Update complaint status
+* Communicate with students
+
+### Administrator
+
+* Manage users and hostel data
+* Monitor complaint analytics
+* Generate reports and insights
+
+## Key Highlights
+
+* Centralized hostel issue management
+* Improved communication between students and hostel authorities
+* Faster complaint resolution process
+* Scalable architecture with secure role-based access
+* Data-driven reporting for better decision-making
+
+## Future Enhancements
+
+* Mobile application support
+* Email and SMS notifications
+* AI-based complaint prioritization
+* Hostel attendance and room allocation modules
+
+## Author
+
+Developed as a full-stack project to solve real-world hostel management challenges through digital automation.
